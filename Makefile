@@ -67,12 +67,15 @@ FLAGS = $(FFLAGS) -I$(MPI_HOME)/include -I$(INCLUDE)
 #	make "PWD=$(PWD)" mpi_dummy
 #	make all
 #
-all :  post_script post_script_2 tauw_x auto_tauw
+all :  post_script post_script_2 post_script_vokeloc tauw_x auto_tauw coor_splitter rmsfrommon
 #
 post_script: post_script.o $(NSMBO)
 	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
 	chmod og+rx $@
 post_script_2: post_script_2.o $(NSMBO)
+	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
+post_script_vokeloc: post_script_vokeloc.o $(NSMBO)
 	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
 	chmod og+rx $@
 tauw_x: tauw_x.o $(NSMBO)
@@ -83,6 +86,20 @@ auto_tauw:  auto_tauw.o $(NSMBO)
 	chmod og+rx $@
 auto_tauw.o: auto_tauw.f90
 	mpif90 -c auto_tauw.f90
+coor_splitter:  coor_splitter.o $(NSMBO)
+	mpif90 $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
+coor_splitter.o: coor_splitter.f90
+	mpif90 -c coor_splitter.f90
+rmsfrommon:  rmsfrommon.o $(NSMBO)
+	mpif90 $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
+rmsfrommon.o: rmsfrommon.f90
+	mpif90 -c rmsfrommon.f90
+
+
+
+
 #
 #include $(INCLUDE)/makefile.h
 #
