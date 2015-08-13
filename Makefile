@@ -67,7 +67,8 @@ FLAGS = $(FFLAGS) -I$(MPI_HOME)/include -I$(INCLUDE)
 #	make "PWD=$(PWD)" mpi_dummy
 #	make all
 #
-all :  post_script post_script_2 post_script_vokeloc tauw_x auto_tauw coor_splitter rmsfrommon
+all :  post_script post_script_2 post_script_vokeloc tauw_x auto_tauw  \
+       coor_splitter rmsfrommon unf_splittocsv surfgrid_extract
 #
 post_script: post_script.o $(NSMBO)
 	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
@@ -96,7 +97,16 @@ rmsfrommon:  rmsfrommon.o $(NSMBO)
 	chmod og+rx $@
 rmsfrommon.o: rmsfrommon.f90
 	mpif90 -c rmsfrommon.f90
-
+unf_splittocsv:  unf_splittocsv.o $(NSMBO)
+	mpif90 $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
+unf_splittocsv.o: unf_splittocsv.f90
+	mpif90 -c unf_splittocsv.f90
+surfgrid_extract:  surfgrid_extract.o $(NSMBO)
+	mpif90 $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
+surfgrid_extract.o: surfgrid_extract.f90
+	mpif90 -c surfgrid_extract.f90
 
 
 
