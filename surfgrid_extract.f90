@@ -11,13 +11,13 @@
         real(kind=8), dimension(:,:,:,:), allocatable :: coor,coorc
         integer last(2),nptot(4)
 !
-        integer, parameter :: jfix1=10,jfix2=41
+        integer, parameter :: jfix1=70,jfix2=31
 !
 !
-        dbname2 = 'omesh_coarse.db'
+        dbname2 = 'omesh_fine3.db'
         myunit = 26
         myunit2 = 27
-        filename = 'surfgrid_1.dat'
+        filename = 'surfgrid_1.3D.dat'
         filename2 = 'splitparams.dat'
         umemcom2 = 1 
         igrid2 = 0
@@ -71,7 +71,9 @@
       end program
 
       subroutine writesurface(myunit,nb,n1,n2,n3,blockset,jfix1,jfix2,coorc)
+!      use csv_file
       implicit none
+!
 !
 !
 !----------------------------------------------------------------------
@@ -88,15 +90,21 @@
 !
       integer      :: i,j
       real(kind=8), parameter :: one=1.0, zero = 0.
-      character(len=30) :: line1,line2,line3
+      character(len=30) :: line1,line2,line3,line00,line01
       integer :: jfix
       real(kind=8) :: myout(3)
 !
+          line00 = '[Name]'
+          line01 = 'CS_BOUNDARY'
           line1 = '[Data]'
           line2 = 'X [ m ], Y [ m ], Z [ m ]'
           line3 = '[Faces]'
 
           if (nb.eq.blockset(1)) then
+            write(myunit,*) 
+            write(myunit,'(A)') line00
+            write(myunit,'(A)') line01
+            write(myunit,*)
             write(myunit,'(A)') line1
             write(myunit,'(A)') line2
             jfix=jfix1
@@ -105,7 +113,8 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
-               write(myunit,102) myout(1),',',myout(2),',',myout(3)
+!               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
+                call csv_write_1d(myunit,myout,.true.)
               enddo
             enddo
           endif
@@ -117,7 +126,8 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
-               write(myunit,102) myout(1),',',myout(2),',',myout(3)
+!               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
+               call csv_write_1d(myunit,myout,.true.)
              enddo
             enddo
           endif
@@ -129,7 +139,8 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
-               write(myunit,102) myout(1),',',myout(2),',',myout(3)
+!               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
+                call csv_write_1d(myunit,myout,.true.)
               enddo
             enddo
           endif
@@ -141,16 +152,116 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
-               write(myunit,102) myout(1),',',myout(2),',',myout(3)
+!               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
+               call csv_write_1d(myunit,myout,.true.)
               enddo
             enddo
           endif
 !
- 102  format(e16.8,A,e16.8,A,e16.8)
+ 102  format(e15.8,A,e15.8,A,e15.8)
+ 103  format(e14.8,A,e14.8,A,e14.8)
 !
 !
       end
 !
+
+
+      subroutine csv_write_1d( lun, array, advance )
+      real(kind=kind(1.0d0)), intent(in)   :: array(3)
+
+
+      integer, intent(in)                 :: lun
+      logical, intent(in), optional       :: advance
+
+      logical                             :: adv
+      integer                             :: i
+
+      adv = .true.
+      if ( present(advance) ) adv = advance
+
+      do i = 1,size(array)-1
+!          print *,'hello'
+          call csv_write_dble( lun, array(i), .false. )
+      enddo
+      call csv_write_dble( lun, array(size(array)), adv )
+
+      end
+
+
+
+      subroutine csv_write_dble( lun, value, advance )
+       integer, intent(in)                    :: lun
+       real(kind=kind(1.0d0)), intent(in)     :: value
+       logical, intent(in)                    :: advance
+
+       character(len=40)     :: buffer
+       write( buffer, '(G20.12)' ) value
+       buffer = adjustl(buffer)
+       if ( advance ) then
+         write(lun,'(a)') trim(buffer)
+       else
+       ! Most probably: write the comma only when needed
+       ! - depends on other actions
+       write(lun,'(a,a)',advance='no') trim(buffer), ', '
+       endif
+      end 
+
+
+      subroutine csv_write_int1d( lun, array, advance )
+      integer, intent(in)   :: array(4)
+
+
+      integer, intent(in)                 :: lun
+      logical, intent(in), optional       :: advance
+      logical                             :: adv
+      integer                             :: i
+
+! for 2D array
+!      integer, intent(in)                 :: lun
+!      logical                             :: adv
+!      integer                             :: i
+
+!      adv = .true.
+
+!      do i = 1,size(array,2)
+!          call csv_write_integer( lun, array(:,i), adv )
+!      enddo
+
+
+
+
+      adv = .true.
+      if ( present(advance) ) adv = advance
+
+      do i = 1,size(array)-1
+          print *,'hello'
+          call csv_write_integer( lun, array(i), .false. )
+      enddo
+      call csv_write_integer( lun, array(size(array)), adv )
+
+      end
+
+
+
+      subroutine csv_write_integer( lun, value, advance )
+       integer, intent(in)   :: lun
+       integer, intent(in)   :: value
+       logical, intent(in)   :: advance
+
+       character(len=40)     :: buffer
+       write( buffer, '(I10)' ) value
+       buffer = adjustl(buffer)
+       if ( advance ) then
+         write(lun,'(a)') trim(buffer)
+       else
+       ! Most probably: write the comma only when needed
+       ! - depends on other actions
+         write(lun,'(a,a)',advance='no') trim(buffer), ', '
+       endif
+       end subroutine csv_write_integer
+
+
+
       subroutine writefacecon(nb,blockset,nptot,myunit,last)
 !
         implicit none
@@ -202,7 +313,8 @@
             last(1) = a(nf4,3)
             last(2) = a(nf4,4)
           do n=1,nf4
-            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
+!            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
+            call csv_write_int1d(myunit,a(n,:),.true.)
           enddo
         else            
           a(nf4+1,1) = a(nf4,4)
@@ -217,7 +329,8 @@
           last(1) = a(nf4+1,3)
           last(2) = a(nf4+1,4)
           do n=1,nf4+1
-            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
+!            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
+             call csv_write_int1d(myunit,a(n,:),.true.)
           enddo
         endif
 !
