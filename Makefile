@@ -68,7 +68,8 @@ FLAGS = $(FFLAGS) -I$(MPI_HOME)/include -I$(INCLUDE)
 #	make all
 #
 all :  post_script post_script_2 post_script_vokeloc tauw_x auto_tauw  \
-       coor_splitter rmsfrommon unf_splittocsv surfgrid_extract
+       coor_splitter rmsfrommon unf_splittocsv surfgrid_extract \
+       post_script_vokeloc_new
 #
 post_script: post_script.o $(NSMBO)
 	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
@@ -107,9 +108,9 @@ surfgrid_extract:  surfgrid_extract.o $(NSMBO)
 	chmod og+rx $@
 surfgrid_extract.o: surfgrid_extract.f90
 	mpif90 -c surfgrid_extract.f90
-
-
-
+post_script_vokeloc_new: post_script_vokeloc_new.o $(NSMBO)
+	$(F77) $(LFLAGS) -o $@ $@.o $(NSMBO) mpi_dummy.o $(LIBS)
+	chmod og+rx $@
 #
 #include $(INCLUDE)/makefile.h
 #

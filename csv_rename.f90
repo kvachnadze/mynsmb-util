@@ -1,13 +1,19 @@
       program rename_csv
         implicit none
         integer doflag
-        integer rm1,rm2,incr,newset
-        integer i, j, k
+        integer rm1,rm2,incr,newset,incr2
+        integer i, j, k, nstep
         character*60 command1,command2
-        character*30 oldname,newname
+        character*30 oldname,newname,newname2
 
-!        nstep = 2660
+!        nstep = 26990
 
+
+
+!        go to 100
+         !  COMMENTING OUT THE CODE FOR 'NORMAL FILES'
+
+!       100 continue
 
       !input parameters
 !      print *,'***** INPUT'
@@ -91,9 +97,63 @@
 
 
       endif
-     endif    
+     endif 
 
-      contains
+
+!        100 continue
+        go to 100
+
+        print *,'***** give the first value of csv:'
+        read *,rm1
+        print *,'***** give the last value of csv:'
+        read *,rm2
+        print *,'***** give the csv files increment number:'
+        read *,incr
+        print *,'***** give the csv files increment DESIRED number:'
+        read *,incr2
+
+
+
+!        nfile = (rm2-rm1)/incr
+        do i=rm1,rm2,incr2
+!          oldname = trim(str(i))//'.csv'          
+          call getcsvname(rm2,i,newname)
+          newname2 = trim(newname)//'_save'
+          command1 = 'mv '//trim(newname)//' '//trim(newname2)
+          call system(command1)
+        enddo
+ 
+        do i=rm1,rm2,incr
+!          oldname = trim(str(i))//'.csv'          
+           call getcsvname(rm2,i,newname)
+           command2 = 'rm '//trim(newname)
+           call system(command2)
+        enddo
+
+        do i=rm1,rm2,incr2
+          call getcsvname(rm2,i,newname)
+          newname2 = trim(newname)//'_save'
+          command1 = 'mv '//trim(newname2)//' '//trim(newname)
+          call system(command1)
+        enddo
+
+
+
+!        200 continue
+                j = 0
+                do i=10,26910,100
+!                  call getcsvname(26910,i,newname)
+                  j = j + 1
+                  oldname = trim(str(i))//'.csv'
+                  newname = trim(str(j))//'.csv'
+                  command1 = 'mv '//trim(oldname)//' '//trim(newname)
+                  call system(command1)
+                enddo
+
+         100 continue
+  
+
+       contains
 !
       function str(k)
         !   "Convert an integer to string."
