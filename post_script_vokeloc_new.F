@@ -14,20 +14,34 @@
       logical :: exists
       integer i2d, nsurf
       real(kind=8), dimension(:,:,:,:),allocatable :: velo_1a,velo_1b
+      real(kind=8), dimension(:,:,:,:),allocatable :: velo_2a,velo_2b
+c
       real(kind=8), dimension(:,:,:),allocatable :: velos,velos2
       real(kind=8),dimension(:,:,:),allocatable :: velo_hom,velo_hom2
       real(kind=8), dimension(:,:,:),allocatable :: velorms
       real(kind=8), dimension(:,:),allocatable :: uv,uv_hom,uvrms
+c
+      real(kind=8), dimension(:,:,:),allocatable :: velos_2,velos2_2
+      real(kind=8),dimension(:,:,:),allocatable :: velohom_2,velohom2_2
+      real(kind=8), dimension(:,:,:),allocatable :: velorms_2
+      real(kind=8), dimension(:,:),allocatable :: uv_2,uvhom_2,uvrms_2
+c
       real(kind=8), dimension(:,:,:,:),allocatable :: coor_1a
       real(kind=8), dimension(:,:,:,:),allocatable :: coorc_1a
+      real(kind=8), dimension(:,:,:,:),allocatable :: coor_2a
+      real(kind=8), dimension(:,:,:,:),allocatable :: coorc_2a
 c
-      real(kind=8), dimension(:), allocatable :: yc
+      real(kind=8), dimension(:), allocatable :: yc,yc_up
+      real(kind=8), dimension(:,:), allocatable :: xc_1,xc_2      
 c
 c
       real(kind=8), parameter :: zero = 0.0,half=0.5,one=1.0
       real*8 wt,w_old,w_new
       integer nb_1a,nb_1b,n1_1a,n2_1a,n3_1a,n1_1b,n2_1b,n3_1b
       integer np_1a,np_1b,np_coor_1a,n1glob,n1max,n3tot
+      integer nb_2a,nb_2b,n1_2a,n2_2a,n3_2a,n1_2b,n2_2b,n3_2b
+      integer np_2a,np_2b,np_coor_2a
+      integer n2_up
       integer vset,va,n3glob,n3b,cter
 c
 c
@@ -35,11 +49,14 @@ c
       real(kind=8) rho,nu
 c
       integer, parameter :: intset=5,nres=4,dball=91,voke=7
+      integer, parameter :: n2up_cut = 6
       character baseset(dball)*24
       real timeset(dball)
       real xc(voke)
       integer blockset1a(intset)
       integer blockset1b(intset)
+      integer blockset2a(intset)
+      integer blockset2b(intset)
       integer nxcvoke(voke)
       integer nbvoke(voke)
       integer nbunit(voke)
@@ -56,15 +73,16 @@ c
 c
        data blockset1a /120,156,160,194,198/
        data blockset1b /119,155,159,193,197/
-c      data blockset2a /118,118,122,158,158,162,196/
+       data blockset2a /118,122,158,162,196/
+       data blockset2b /117,121,157,161,195/       
        data nbvoke /120,120,156,160,160,194,198/
        data nxcvoke /13,4,20,27,19,25,30/
        data nbunit /100,101,102,103,104,105,106/
 c     &               13,4,20,27,19,25,30/
 c       data baseset /120,156,160,194,198,220,224,238,242,248,246/
-         header = '#    X            Y            U_av'//
-     &   '            V_av            W_av            Urms'//
-     &   '            Vrms            Wrms            UVrms'
+         header = '#    X/D            Y/D            U_av/U0'//
+     &   '            V_av/U0            W_av/U0            Urms/U0'//
+     &   '            Vrms/U0            Wrms/U0            UVrms/U0^2'
        ll1 = len_trim(header)
 c       print *, ll1
        form_out = '(9(1x,g14.7))'
@@ -130,20 +148,34 @@ c      n1max = 5*n1glob
 
       do nset=1,intset
          call getdim(blockset1a(nset),umemcom2,n1,n2,n3)
+!         print *, 'n1', n1 
          n1max = n1max + n1         
       enddo
-         n2glob = n2
       call getdim(blockset1b(1),umemcom2,n1,n2,n3b)
+         n2glob = n2
          n3glob = n3 + n3b
-      
+      call getdim(blockset2a(1),umemcom2,n1,n2,n3)
+         n2_up = n2
+c         n3glob = n3 + n3b
+
+      print *, 'n1max, n2glob, n3glob',n1max, n2glob, n3glob 
+      print *, 'n2_up',n2_up
+  
 
 c
 c... allocating global arrays
       allocate(yc(n2glob))
+      allocate(yc_up(n2_up))
+      allocate(xc_1(voke,n2glob))
+      allocate(xc_2(voke,n2_up))
 c      allocate(xy(2,n1max,n2glob))
       allocate(velos(3,n1max,n2glob))
       allocate(velos2(3,n1max,n2glob))
       allocate(uv(n1max,n2glob))
+c
+      allocate(velos_2(3,n1max,n2_up))
+      allocate(velos2_2(3,n1max,n2_up))
+      allocate(uv_2(n1max,n2_up))
 c
       allocate(velo_hom(3,n1max,n2glob))
       allocate(velo_hom2(3,n1max,n2glob))
@@ -151,17 +183,31 @@ c
       allocate(uv_hom(n1max,n2glob))
       allocate(uvrms(n1max,n2glob))
 c
+      allocate(velohom_2(3,n1max,n2_up))
+      allocate(velohom2_2(3,n1max,n2_up))
+      allocate(velorms_2(3,n1max,n2_up))
+      allocate(uvhom_2(n1max,n2_up))
+      allocate(uvrms_2(n1max,n2_up))
+c
 c      xy = 0
       iglobe = 0
       velos = 0
       velos2 = 0
       uv = 0
+      velos_2 = 0
+      velos2_2 = 0
+      uv_2 = 0
 c      nz = 0
       velo_hom = 0
       velo_hom2 = 0
       velorms = 0
       uv_hom = 0
       uvrms = 0
+      velohom_2 = 0
+      velohom2_2 = 0
+      velorms_2 = 0
+      uvhom_2 = 0
+      uvrms_2 = 0
 c      print *,'n2glob= ',n2glob
 c      stop
 c
@@ -197,9 +243,14 @@ c        print *,i
 c      print *,ic
 c
        cter = 0     
+c
        velos = 0
        velos2 = 0
        uv = 0
+c
+       velos_2 = 0
+       velos2_2 = 0
+       uv_2 = 0
 
 c ... looping over the set of blocks
       do nset=1,intset
@@ -207,34 +258,41 @@ c
 c ... read MDES to obtain grid size
          nb_1a=blockset1a(nset)
          nb_1b=blockset1b(nset)
-
+c
+         nb_2a=blockset2a(nset)
+         nb_2b=blockset2b(nset)
+c
 c ... find n1,n2,n3 for each and extract the var's
-         call makelabl('MDES',nb_1a,igrid2,0,cbuf,istat2)
-         call gettab(umemcom2,cbuf,0,istat2)
-         call getbwi('N1',n1_1a,istat2)
-         call getbwi('N2',n2_1a,istat2)
-         call getbwi('N3',n3_1a,istat2)
+         call getdim(nb_1a,umemcom2,n1_1a,n2_1a,n3_1a)
+         call getdim(nb_1b,umemcom2,n1_1b,n2_1b,n3_1b)
+c find for upper blocks too
+         call getdim(nb_2a,umemcom2,n1_2a,n2_2a,n3_2a)
+         call getdim(nb_2b,umemcom2,n1_2b,n2_2b,n3_2b)
+c
          np_coor_1a = (n1_1a+1)*(n2_1a+1)*(n3_1a+1)
-	 np_1a = (n1_1a+2)*(n2_1a+2)*(n3_1a+2)
- 
-         call makelabl('MDES',nb_1b,igrid2,0,cbuf,istat2)
-         call gettab(umemcom2,cbuf,0,istat2)
-         call getbwi('N1',n1_1b,istat2)
-         call getbwi('N2',n2_1b,istat2)
-         call getbwi('N3',n3_1b,istat2)
-c         np_coor_1b = (n1_1b+1)*(n2_1b+1)*(n3_1b+1)
+	 np_1a = (n1_1a+2)*(n2_1a+2)*(n3_1a+2) 
 	 np_1b = (n1_1b+2)*(n2_1b+2)*(n3_1b+2)
+c for upper blocks too
+         np_coor_2a = (n1_2a+1)*(n2_2a+1)*(n3_2a+1)
+	 np_2a = (n1_2a+2)*(n2_2a+2)*(n3_2a+2) 
+	 np_2b = (n1_2b+2)*(n2_2b+2)*(n3_2b+2)
+c         np_coor_1b = (n1_1b+1)*(n2_1b+1)*(n3_1b+1)
 
-         n1=n1_1a
-         n2=n2_1a
-         n3=n3_1a
+c         n1=n1_1a
+c         n2=n2_1a
+c         n3=n3_1a
 c         nz(nset) = n3_1a + n3_1b
-
+c
          allocate(velo_1a(3,0:n1_1a+1,0:n2_1a+1,0:n3_1a+1))
          allocate(coor_1a(3,n1_1a+1,n2_1a+1,n3_1a+1))
          allocate(coorc_1a(3,0:n1_1a+1,0:n2_1a+1,0:n3_1a+1))
          allocate(velo_1b(3,0:n1_1b+1,0:n2_1b+1,0:n3_1b+1))
-
+c  and for upper blocks
+         allocate(velo_2a(3,0:n1_1a+1,0:n2_1a+1,0:n3_1a+1))
+         allocate(coor_2a(3,n1_1a+1,n2_1a+1,n3_1a+1))
+         allocate(coorc_2a(3,0:n1_1a+1,0:n2_1a+1,0:n3_1a+1))
+         allocate(velo_2b(3,0:n1_1b+1,0:n2_1b+1,0:n3_1b+1))
+c
          call m2c_iomemcom(velo_1a,'VELO',np_1a,3,
      &                        nb_1a,igrid,ic,
      &                        umemcom,6,1,istat)
@@ -247,43 +305,56 @@ c
          call m2c_iomemcom(velo_1b,'VELO',np_1b,3,
      &                        nb_1b,igrid,ic,
      &                        umemcom,6,1,istat)
+c
+c
+c
+c ...        for upper blocks
+         call m2c_iomemcom(velo_2a,'VELO',np_2a,3,
+     &                        nb_2a,igrid,ic,
+     &                        umemcom,6,1,istat)
+         call m2c_iomemcom(coor_2a,'COOR',3*np_coor_2a,1,
+     &                     nb_2a,igrid2,0,
+     &                     umemcom2,6,1,istat2)
+c     calculate cell center coordinates
+         call center3d(coor_2a,coorc_2a,n1_2a,n2_2a,n3_2a)
+c
+         call m2c_iomemcom(velo_2b,'VELO',np_2b,3,
+     &                        nb_2b,igrid,ic,
+     &                        umemcom,6,1,istat)
+
 
 
 c calculate the sum's for averaging in homogenious z-direction (velo, uv)
-       do j=1,n2
-        do i=1,n1_1a
-          do k=1,n3_1a
-           do l=1,3
-              velos(l,i+cter,j)=velos(l,i+cter,j)+velo_1a(l,i,j,k)
-              velos2(l,i+cter,j)=velos2(l,i+cter,j)+velo_1a(l,i,j,k)**2
-            enddo
-            uv(i+cter,j)=uv(i+cter,j)+velo_1a(1,i,j,k)*velo_1a(2,i,j,k)
-          enddo
-        enddo
-        end do
-        do j=1,n2
-        do i=1,n1_1b
-          do k=1,n3_1b
-            do l=1,3
-              velos(l,i+cter,j)=velos(l,i+cter,j)+velo_1b(l,i,j,k)
-              velos2(l,i+cter,j)=velos2(l,i+cter,j)+velo_1b(l,i,j,k)**2
-             enddo
-            uv(i+cter,j)=uv(i+cter,j)+velo_1b(1,i,j,k)*velo_1b(2,i,j,k)
-          enddo
-        enddo
-        end do
-
+      call sumoverz(n1_1a,n2_1a,n3_1a,n1max,n2glob,cter,velo_1a,
+     &           velos,velos2,uv)
+      call sumoverz(n1_1b,n2_1b,n3_1b,n1max,n2glob,cter,velo_1b,
+     &           velos,velos2,uv)
+c for upper blocks
+      call sumoverz(n1_2a,n2_2a,n3_2a,n1max,n2_up,cter,velo_2a,
+     &           velos_2,velos2_2,uv_2)
+      call sumoverz(n1_2b,n2_2b,n3_2b,n1max,n2_up,cter,velo_2b,
+     &           velos_2,velos2_2,uv_2)
+  
         do vset=1,voke
           if (nb_1a.eq.nbvoke(vset)) then
-            xc(vset) = coorc_1a(1,nxcvoke(vset),1,1)
+            xc(vset) = coorc_1a(1,nxcvoke(vset),1,1)            
             iglobe(vset) = nxcvoke(vset)+cter
+            do j=1,n2_1a
+              xc_1(vset,j) = coorc_1a(1,nxcvoke(vset),j,1)
+            enddo
+            do j=1,n2_2a
+              xc_2(vset,j) = coorc_2a(1,nxcvoke(vset),j,1)
+            enddo
           endif          
         enddo            
 
         if (nset.eq.1) then
-          do j=1,n2
+          do j=1,n2_1a
             yc(j) = coorc_1a(2,1,j,1)
           enddo
+          do j=1,n2_2a
+            yc_up(j) = coorc_2a(2,1,j,1)
+          enddo      
         endif
 
 c ...   fill 2D array with xy coordinates and block number
@@ -299,11 +370,11 @@ c          i = nxcvoke(vset)
 c          xc(vset)=xy(nset,1,i,1)        
 
 
-        deallocate(coor_1a)
-        deallocate(coorc_1a)
+        deallocate(coor_1a,coor_2a)
+        deallocate(coorc_1a,coorc_2a)
 c        deallocate(pscalar)
-        deallocate(velo_1a)
-        deallocate(velo_1b)
+        deallocate(velo_1a,velo_2a)
+        deallocate(velo_1b,velo_2b)
 c        deallocate(pscalar2)
 c        deallocate(xy)
 c...  closing loop over blocks     
@@ -331,10 +402,34 @@ c
         enddo
       enddo
 c
+c... for upper blocks
+      do j=1,n2_up
+        do i=1,n1max
+            do l=1,3
+               velohom_2(l,i,j) = w_old*velohom_2(l,i,j) + 
+     &                w_new*(velos_2(l,i,j)/n3glob)
+               velohom2_2(l,i,j) = w_old*velohom2_2(l,i,j) +
+     &                w_new*(velos2_2(l,i,j)/n3glob)
+              velorms_2(l,i,j) = sqrt(velohom2_2(l,i,j) - 
+     &                    velohom_2(l,i,j)**2)
+            enddo
+               uvhom_2(i,j) = w_old*uvhom_2(i,j) + 
+     &                w_new*(uv_2(i,j)/n3glob)
+              uvrms_2(i,j) = uvhom_2(i,j) - 
+     &    velohom_2(1,i,j)*velohom_2(2,i,j)
+        enddo
+      enddo
+c
+c
+c
+c
 c...  closing loop over databases
       end do
+c      stop
 
+      i=0
 
+c      print *, 'n2glob', n2glob
 c ... writing out 7 voke's positions to 7 files
       do vset=1,voke
 c        nb=nbvoke(vset)
@@ -352,9 +447,10 @@ c
      &                  position='append')        
           write(nbunit(vset),'(a)') header(1:ll1)
 c
-          do j=1,n2glob        
+c       stop
+        do j=1,n2glob        
 c           yc(j)=xy(nset,2,i,j)
-         write(nbunit(vset),form_out) xc(vset),yc(j)/diam-0.5,
+         write(nbunit(vset),form_out) xc_1(vset,j)/diam,yc(j)/diam-0.5,
      &        velo_hom(1,i,j)/u0,velo_hom(2,i,j)/u0,
      &                  velo_hom(3,i,j)/u0,
      &        velorms(1,i,j)/u0,velorms(2,i,j)/u0,
@@ -363,14 +459,26 @@ c           yc(j)=xy(nset,2,i,j)
 c     &                  yplus(nset,j),urmsplus(nset,j),
 c     &                  vrmsplus(nset,j),wrmsplus(nset,j)
         enddo
-      
+c
+        do j=1,n2up_cut
+         write(nbunit(vset),form_out) xc_2(vset,j)/diam,
+     &     yc_up(j)/diam-0.5,velohom_2(1,i,j)/u0,velohom_2(2,i,j)/u0,
+     &                  velohom_2(3,i,j)/u0,
+     &        velorms_2(1,i,j)/u0,velorms_2(2,i,j)/u0,
+     &                  velorms_2(3,i,j)/u0,
+     &        uvrms_2(i,j)/(u0**2)
+        enddo  
+c      
        close(nbunit(vset))
 
       enddo
 c
-      deallocate(yc,velos,velos2,uv)
+      deallocate(yc,velos,velos2,uv,yc_up)
+      deallocate(velos_2,velos2_2,uv_2)
       deallocate(velo_hom,velo_hom2,uv_hom)
+      deallocate(velohom_2,velohom2_2,uvhom_2)
       deallocate(velorms,uvrms)
+      deallocate(velorms_2,uvrms_2,xc_1,xc_2)
 c
 c
       call endadb
@@ -396,12 +504,40 @@ c
 
       end program
 
+
+      subroutine sumoverz(n1,n2,n3,n1max,n2glob,cter,velo,
+     &           velos,velos2,uv)
+      implicit none
+       integer, intent(in) :: n1,n2,n3,cter,n2glob,n1max
+       real*8, intent(in) :: velo(3,0:n1+1,0:n2+1,0:n3+1)
+       real*8, intent(inout) :: velos(3,n1max,n2glob)
+       real*8, intent(inout) :: velos2(3,n1max,n2glob)
+       real*8, intent(inout) :: uv(n1max,n2glob)
+c
+       integer i,j,k,l
+c
+       do j=1,n2
+        do i=1,n1
+          do k=1,n3
+           do l=1,3
+              velos(l,i+cter,j)=velos(l,i+cter,j)+velo(l,i,j,k)
+              velos2(l,i+cter,j)=velos2(l,i+cter,j)+velo(l,i,j,k)**2
+            enddo
+            uv(i+cter,j)=uv(i+cter,j)+velo(1,i,j,k)*velo(2,i,j,k)
+          enddo
+        enddo
+        end do
+c       
+      end
+
       subroutine getdim(nblock,umemcom,n1,n2,n3)
       implicit none
         integer, intent(in) :: umemcom,nblock
         integer, intent(out) :: n1,n2,n3
         integer igrid,istat
-        character *30 cbuf      
+        character *30 cbuf
+        igrid = 0
+        istat = 0      
         call makelabl('MDES',nblock,igrid,0,cbuf,istat)
         call gettab(umemcom,cbuf,0,istat)
         call getbwi('N1',n1,istat)
