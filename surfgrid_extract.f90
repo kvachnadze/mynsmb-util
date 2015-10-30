@@ -9,20 +9,24 @@
         integer blockset(4)
         data blockset /9,12,10,11/
         real(kind=8), dimension(:,:,:,:), allocatable :: coor,coorc
-        integer last(2),nptot(4)
-!
-        integer, parameter :: jfix1=70,jfix2=31
+        integer last(2),nptot(4),uplast
+! D=1.3
+!        integer, parameter :: jfix1=70,jfix2=31 
+! D=1.0 first cell
+        integer, parameter :: jfix1=99,jfix2=1
+
 !
 !
         dbname2 = 'omesh_fine3.db'
         myunit = 26
         myunit2 = 27
-        filename = 'surfgrid_1.3D.dat'
+        filename = 'surfgrid_1D_oldset_zfix.dat'
         filename2 = 'splitparams.dat'
         umemcom2 = 1 
         igrid2 = 0
         nptot = 0
         last = 0
+        uplast=0
 !
         call initmc(1,6,6)
         call opdidb(umemcom2,dbname2,1,' ',istat2)
@@ -59,7 +63,7 @@
 !
         do i=1,4
           nb = blockset(i)
-          call writefacecon(nb,blockset,nptot(i),myunit,last)
+          call writefacecon(nb,blockset,nptot(i),myunit,last,uplast)
           write(myunit2,*) nptot(i)
         enddo
 !
@@ -83,6 +87,7 @@
       integer, intent(in) :: myunit,nb,jfix1,jfix2,blockset(4)
       integer, intent(in) :: n1,n2,n3
       real(kind=8), intent(in) :: coorc(3,0:n1+1,0:n2+1,0:n3+1)
+!       real(kind=8), intent(in) :: coor(3,n1+1,n2+1,n3+1)
 !
 !----------------------------------------------------------------------
 ! --- LOCAL VARIABLES
@@ -113,6 +118,7 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
+                myout(3)=myout(3)+(myout(3)-0.5)
 !               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
                 call csv_write_1d(myunit,myout,.true.)
               enddo
@@ -126,6 +132,7 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
+                myout(3)=myout(3)+(myout(3)-0.5)
 !               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
                call csv_write_1d(myunit,myout,.true.)
              enddo
@@ -139,6 +146,7 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
+                myout(3)=myout(3)+(myout(3)-0.5)
 !               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
                 call csv_write_1d(myunit,myout,.true.)
               enddo
@@ -152,6 +160,7 @@
                 myout(1)=coorc(1,i,j,jfix)
                 myout(2)=coorc(2,i,j,jfix)
                 myout(3)=coorc(3,i,j,jfix)
+                myout(3)=myout(3)+(myout(3)-0.5)
 !               write(myunit,102) myout(1),', ',myout(2),', ',myout(3)
                call csv_write_1d(myunit,myout,.true.)
               enddo
@@ -195,7 +204,7 @@
        logical, intent(in)                    :: advance
 
        character(len=40)     :: buffer
-       write( buffer, '(G20.12)' ) value
+       write( buffer, '(e15.8)' ) value
        buffer = adjustl(buffer)
        if ( advance ) then
          write(lun,'(a)') trim(buffer)
@@ -234,7 +243,7 @@
       if ( present(advance) ) adv = advance
 
       do i = 1,size(array)-1
-          print *,'hello'
+!          print *,'hello'
           call csv_write_integer( lun, array(i), .false. )
       enddo
       call csv_write_integer( lun, array(size(array)), adv )
@@ -262,19 +271,20 @@
 
 
 
-      subroutine writefacecon(nb,blockset,nptot,myunit,last)
+      subroutine writefacecon(nb,blockset,nptot,myunit,last,uplast)
 !
         implicit none
         integer :: n,nf4,ost4
         integer,intent(in) :: nptot,myunit,nb,blockset(4)
-        integer,intent(inout) :: last(2)
+        integer,intent(inout) :: last(2),uplast
         integer, dimension(:,:), allocatable :: a
 !
 !
-        nf4 = int(nptot/4)
+        nf4 = int(nptot/2)
         ost4 = mod(nptot, 4)
-!
-        allocate(a(nf4+1,4))
+!  
+
+        allocate(a(nf4,4))
 !
         if (nb.eq.blockset(1)) then       
           write(myunit,*)      
@@ -292,47 +302,105 @@
           enddo
           a(1,1) = 0 
           a(1,2) = 1 
+!          a(nf4+1,1) = a(nf4,4)
+!          a(nf4+1,2) = a(nf4,3)
+!          a(nf4+1,3) = a(nf4,4) + 1
+!          a(nf4+1,4) = a(nf4,4) + 2
         else
           do n=1,nf4
             a(n,1) = last(2) + (n-1)*2
             a(n,2) = last(1) + (n-1)*2
             a(n,3) = (last(2)+1) + (n-1)*2
             a(n,4) = (last(2)+2) + (n-1)*2
-          enddo
+          enddo       
         endif
+
+!        if (nb.eq.blockset(2)) then
+!          do n=1,nf4
+!            a(n,1) = last(2) + (n-1)*2
+!            a(n,2) = last(1) + (n-1)*2
+!            a(n,3) = (last(2)+1) + (n-1)*2
+!            a(n,4) = (last(2)+2) + (n-1)*2
+!          enddo
+!          a(nf4+1,1) = a(nf4,4)
+!          a(nf4+1,2) = a(nf4,3)
+!          a(nf4+1,3) = a(nf4,4) + 1
+!          a(nf4+1,4) = a(nf4,4) + 2
+!          uplast = a(nf4,4)
+!        endif
+
+!        if (nb.eq.blockset(3)) then
+!          do n=1,nf4
+!            a(n,1) = (last(2)+1) + (n-1)*2
+!            a(n,2) = (last(2)+2) + (n-1)*2
+!            a(n,3) = last(2) + (n-1)*2
+!            a(n,4) = last(1) + (n-1)*2
+!          enddo
+!          a(1,3) = 1 
+!          a(1,4) = 0
+!          a(nf4+1,1) = a(nf4,1) + 2
+!          a(nf4+1,2) = a(nf4,2) + 2
+!          a(nf4+1,3) = a(nf4,3) + 2
+!          a(nf4+1,4) = a(nf4,4) + 2
+!        endif
+
+        if (nb.eq.blockset(4)) then
+!          do n=1,nf4
+!            a(n,1) = (last(1)+3) + (n-1)*2
+!            a(n,2) = (last(1)+4) + (n-1)*2
+!            a(n,3) = (last(1)+2) + (n-1)*2
+!            a(n,4) = (last(2)+2) + (n-1)*2
+!          enddo
+          a(nf4,3) = 1
+          a(nf4,4) = 0
+!          a(nf4+1,3) = a(nf4,3) + 2
+!          a(nf4+1,4) = a(nf4,4) + 2            
+        endif
+
+          last(1) = a(nf4,3)
+          last(2) = a(nf4,4)
+
+
 !
 !      
-        if (ost4.eq.2) then
-          if (nb.eq.blockset(4)) then
-            a(nf4,3) = 1
-            a(nf4,4) = 0
-          else
-            a(nf4,3) = a(nf4,1) + 1
-            a(nf4,4) = a(nf4,1) + 2
-          endif            
-            last(1) = a(nf4,3)
-            last(2) = a(nf4,4)
-          do n=1,nf4
+!        if (ost4.eq.2) then
+!          if (nb.eq.blockset(4)) then
+!            a(nf4,3) = 1
+!            a(nf4,4) = 0
+!          else
+!            a(nf4,3) = a(nf4,1) + 1
+!            a(nf4,4) = a(nf4,1) + 2
+!          endif            
+!            last(1) = a(nf4,3)
+!            last(2) = a(nf4,4)
+!          do n=1,nf4
 !            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
-            call csv_write_int1d(myunit,a(n,:),.true.)
-          enddo
-        else            
-          a(nf4+1,1) = a(nf4,4)
-          a(nf4+1,2) = a(nf4,3)
-          if (nb.eq.blockset(4)) then
-            a(nf4+1,3) = 1
-            a(nf4+1,4) = 0
-          else
-            a(nf4+1,3) = a(nf4,4) + 1
-            a(nf4+1,4) = a(nf4,4) + 2
-          endif
-          last(1) = a(nf4+1,3)
-          last(2) = a(nf4+1,4)
-          do n=1,nf4+1
+!            call csv_write_int1d(myunit,a(n,:),.true.)
+!          enddo
+!        else            
+!          a(nf4+1,1) = a(nf4,4)
+!          a(nf4+1,2) = a(nf4,3)
+!          if (nb.eq.blockset(4)) then
+!            a(nf4+1,3) = 1
+!            a(nf4+1,4) = 0
+!          else
+
+
+!            a(nf4+1,3) = a(nf4,4) + 1
+!            a(nf4+1,4) = a(nf4,4) + 2
+!          endif
+!          last(1) = a(nf4+1,3)
+!          last(2) = a(nf4+1,4)
+
+
+          do n=1,nf4
 !            write(myunit,101) a(n,1),',',a(n,2),',',a(n,3),',',a(n,4)
              call csv_write_int1d(myunit,a(n,:),.true.)
           enddo
-        endif
+
+
+
+!        endif
 !
  101  format(i3,A,i3,A,i3,A,i3)
         deallocate(a)
