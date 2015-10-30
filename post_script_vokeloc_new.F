@@ -48,7 +48,7 @@ c
       real(kind=8) velosum,psum,u0,diam
       real(kind=8) rho,nu
 c
-      integer, parameter :: intset=5,nres=4,dball=91,voke=7
+      integer, parameter :: intset=5,nres=4,dball=226,voke=7
       integer, parameter :: n2up_cut = 6
       character baseset(dball)*24
       real timeset(dball)
@@ -76,7 +76,7 @@ c
        data blockset2a /118,122,158,162,196/
        data blockset2b /117,121,157,161,195/       
        data nbvoke /120,120,156,160,160,194,198/
-       data nxcvoke /13,4,20,27,19,25,30/
+       data nxcvoke /13,3,20,27,18,25,30/
        data nbunit /100,101,102,103,104,105,106/
 c     &               13,4,20,27,19,25,30/
 c       data baseset /120,156,160,194,198,220,224,238,242,248,246/
@@ -89,7 +89,7 @@ c       print *, ll1
 c      
       do i=1,dball
 c        tcalc=44+i+(i-1)
-        tcalc=2*(i-1)+630 
+        tcalc=2*(i-1)+360
 c        timeset(i)=tcalc/100.0
 c        print *,tcalc,timeset(i)
         baseset(i)='time_1.'//trim(str(tcalc))//'.db'
@@ -215,12 +215,26 @@ c
 
 c
 c... loop over the solution databases
-      do dbset=1,dball
+      do dbset=1,dball       
+c      call endadb
+c      call initmc(1,6,6)
+c      call opdidb(umemcom2,dbname2,1,' ',istat2)
+c      
 c
         w_new = one / real(dbset)
         w_old = one - w_new
 
-      umemcom=1+dbset
+      if (dbset.le.99) then 
+        umemcom=1+dbset
+      else 
+        if (dbset.le.198) then       
+        umemcom=1+(dbset-99)
+      else
+        if (dbset.le.297) then       
+        umemcom=1+(dbset-198)
+      endif
+      endif
+      endif
       dbname=trim(baseset(dbset))
 c ... initialize the database with solution     
       call opdidb(umemcom,dbname,0,' ',istat)      
@@ -422,7 +436,7 @@ c... for upper blocks
 c
 c
 c
-c
+         call enddb(umemcom,istat)
 c...  closing loop over databases
       end do
 c      stop
